@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Mapa das Pesquisas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+  <style>
+    body { padding-top: 70px; }
+    #map { height: 70vh; width: 100%; margin: 20px auto; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h2 { margin: 25px 0 15px; text-align: center; }
+    #formSelect, #recencySelect { width: 300px; margin-right: 10px; }
+    .filtros { display: flex; justify-content: center; margin-bottom: 12px; gap: 10px;}
+  </style>
+</head>
+<body>
+  <script>
+    const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+    if (!usuario) {
+      window.location.replace('login.html');
+    } else if (usuario.nivel !== 'admin') {
+      window.location.replace('responder-formulario.html');
+    }
+  </script>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="dashboard.html">Formulários</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+              data-bs-target="#navMenu" aria-controls="navMenu" aria-expanded="false"
+              aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse show" id="navMenu">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0" id="navMenuItems">
+          <li class="nav-item"><a class="nav-link" href="criar-formulario.html">Criar</a></li>
+          <li class="nav-item"><a class="nav-link" href="responder-formulario.html">Responder</a></li>
+          <li class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="relatorio.html">Relatório</a></li>
+          <li class="nav-item"><a class="nav-link active" href="mapa.html">Mapa</a></li>
+        </ul>
+        <button class="btn btn-outline-light ms-2" id="logoutBtn">Sair</button>
+      </div>
+    </div>
+  </nav>
+  <div class="container">
+    <h2>Localização das Pesquisas</h2>
+    <div class="filtros">
+      <select id="formSelect" class="form-select"></select>
+      <select id="recencySelect" class="form-select">
+        <option value="7">Últimos 7 dias</option>
+        <option value="30">Últimos 30 dias</option>
+        <option value="all">Todas</option>
+      </select>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Botão logout
+    document.addEventListener('DOMContentLoaded', function () {
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+          localStorage.removeItem('usuario');
+          window.location.replace('login.html');
+        });
+      }
+    });
+
+    let formularios = [];
+    let respostas = [];
+    let markers = [];
+    const markerColors = {
+      'pesquisa': 'blue',
+      'denuncia': 'red',
+      'sugestao': 'green',
+      'outro': 'orange'
+    };
+
+    function createColoredMarker(color) {
+      return L.icon({
+        iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+    }
+
+    const map = L.map('map').setView([-14.235, -51.925], 4);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    Promise.all([
+      fetch('/api/formularios').then(res => res.json()),
+      fetch('/api/respostas').then(res => res.json())
+    ]).then(([forms, resps]) => {
+      formularios = forms;
+      respostas = resps;
+
+      const select = document.getElementById('formSelect');
+      forms.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.id;
+        opt.textContent = f.nome;
+        select.appendChild(opt);
+      });
+
+      select.addEventListener('change', updateMarkers);
+      document.getElementById('recencySelect').addEventListener('change', updateMarkers);
+
+      updateMarkers();
+    });
+
+    function updateMarkers() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+
+      const selectedFormId = document.getElementById('formSelect').value;
+      const recency = document.getElementById('recencySelect').value;
+      const now = new Date();
+
+      let filtered = respostas.filter(r => r.formularioId == selectedFormId && r.latitude && r.longitude);
+
+      if(recency !== 'all') {
+        filtered = filtered.filter(r => {
+          const d = new Date(r.data || r.createdAt || 0);
+          if(isNaN(d)) return false;
+          const diff = (now - d) / (1000 * 60 * 60 * 24);
+          return diff <= Number(recency);
+        });
+      }
+
+      const form = formularios.find(f => f.id == selectedFormId);
+      let tipo = (form && form.tipo) ? form.tipo.toLowerCase() : 'outro';
+      if(!(tipo in markerColors)) tipo = 'outro';
+      const color = markerColors[tipo];
+
+      filtered.forEach(resp => {
+        let info = "";
+        if (resp.usuario) info += `<b>Usuário:</b> ${resp.usuario}<br>`;
+        if (resp.email) info += `<b>Email:</b> ${resp.email}<br>`;
+        info += `<b>ID Formulário:</b> ${resp.formularioId}<br>`;
+        if(resp.respostas) {
+          info += '<b>Respostas:</b><ul>';
+          resp.respostas.forEach(r => {
+            info += `<li><b>${r.pergunta}:</b> ${Array.isArray(r.resposta) ? r.resposta.join(', ') : r.resposta}</li>`;
+          });
+          info += '</ul>';
+        }
+        if(resp.data || resp.createdAt) {
+          let dt = new Date(resp.data || resp.createdAt);
+          if(!isNaN(dt)) info += `<b>Data:</b> ${dt.toLocaleString()}<br>`;
+        }
+        // Mostra áudio gravado, se existir
+        if(resp.audio) {
+          info += '<br><b>Áudio gravado:</b><br><audio controls src="' + resp.audio + '"></audio>';
+        }
+
+        const marker = L.marker([resp.latitude, resp.longitude], { icon: createColoredMarker(color) })
+          .addTo(map)
+          .bindPopup(info);
+        markers.push(marker);
+      });
+
+      if (markers.length) {
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.25));
+      }
+    }
+  </script>
+</body>
+</html>
