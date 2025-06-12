@@ -18,13 +18,6 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 // Rota de login
-app.post('/api/usuarios/login', async (req, res) => {
-  const { email, senha } = req.body;
-  if (!email || !senha) {
-    return res
-      .status(400)
-      .json({ error: 'Email e senha são obrigatórios.' });
-  }
 
   // autentica com Supabase Auth
   const { data, error } = await supabase.auth.signInWithPassword({
