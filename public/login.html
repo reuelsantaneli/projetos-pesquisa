@@ -9,7 +9,7 @@
 <body>
   <div class="container d-flex justify-content-center align-items-center" style="height:100vh">
     <div class="card p-4" style="width: 100%; max-width: 400px;">
-      <h3 class="card-title text-center mb-3">Faça login</h3>
+      <h3 class="text-center mb-4">Faça login</h3>
       <div class="mb-3">
         <label for="email" class="form-label">Email</label>
         <input id="email" type="email" class="form-control" autocomplete="username"/>
@@ -25,35 +25,34 @@
     </div>
   </div>
 
-  <!-- Inject Supabase keys -->
+  <!-- 1) Injeção das suas credenciais Supabase -->
   <script>
     window.__SUPA_URL__ = "https://mumtrlalzcaskkssdryq.supabase.co";
     window.__SUPA_KEY__ = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11bXRybGFsemNhc2trc3NkcnlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NDY1MzMsImV4cCI6MjA2NTMyMjUzM30._TD5dWrbUox8kToC13MCDkgVlN6-7Zk76p4PjuOXMfw";
   </script>
-  <!-- Supabase SDK -->
+  <!-- 2) SDK do Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
-  <!-- Login logic -->
+  <!-- 3) Lógica de login -->
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const supabase = supabase.createClient(window.__SUPA_URL__, window.__SUPA_KEY__);
-      const btn = document.getElementById('btnLogin');
-      btn.addEventListener('click', async () => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const supabaseClient = supabase.createClient(window.__SUPA_URL__, window.__SUPA_KEY__);
+      document.getElementById('btnLogin').addEventListener('click', async () => {
         const email = document.getElementById('email').value.trim();
         const senha = document.getElementById('senha').value.trim();
         if (!email || !senha) {
-          alert('Digite seu email e senha');
-          return;
+          return alert('Digite seu email e senha.');
         }
-        const { data: user, error } = await supabase.auth.signIn({ email, password: senha });
+        const { data: user, error } = await supabaseClient.auth.signIn({ email, password: senha });
         if (error) {
-          alert(error.message);
-          return;
+          return alert(error.message);
         }
+        // Grava o usuário na sessão local
         localStorage.setItem('usuario', JSON.stringify({
           id: user.id,
           email: user.email,
           nivel: user.user_metadata.role || 'user'
         }));
+        // Redireciona conforme papel
         if (user.user_metadata.role === 'admin') {
           window.location.href = 'dashboard.html';
         } else {
