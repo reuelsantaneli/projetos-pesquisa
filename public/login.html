@@ -64,7 +64,7 @@ window.__SUPA_KEY__="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
       }
       try {
         // Faz requisição para a rota POST /api/usuarios/login
-        const res = await fetch('/api/usuarios/login', {
+        const res = await fetch('/public/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, senha })
