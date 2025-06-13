@@ -1,40 +1,46 @@
 // api/usuarios/registro.js
 import { createClient } from '@supabase/supabase-js'
 
-// 1) instância “admin” com SERVICE_ROLE_KEY
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+// 1) Inicialize dois clients: um “anon” (se precisar no futuro) e um admin
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+// client público/anônimo (não usado aqui, mas deixo para referência)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// client admin (service role) — tem permissão para criar usuários
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
 export default async function handler(req, res) {
-  // Só aceita POST
+  // 2) Apenas POST
   if (req.method !== 'POST') {
-    return res.setHeader('Allow', 'POST').status(405).end('Method Not Allowed')
+    return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  // 3) Extraia os campos do corpo
   const { email, senha } = req.body
-
-  // validações mínimas
   if (!email || !senha) {
-    return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' })
+    return res.status(400).json({ error: 'Faltando email ou senha' })
   }
 
-  if (senha.length < 6) {
-    return res.status(400).json({ error: 'A senha deve ter ao menos 6 caracteres.' })
+  try {
+    // 4) Crie o usuário forçando confirmação
+    const { data: user, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: senha,
+      email_confirm: true,    // força o usuário como “confirmado”
+    })
+
+    if (error) {
+      // pode ser senha fraca, email existente…
+      return res.status(400).json({ error: error.message })
+    }
+
+    // 5) Retorne o objeto criado (ou apenas o id, se quiser)
+    return res.status(201).json({ user })
+  } catch (err) {
+    console.error('Erro no registro:', err)
+    return res.status(500).json({ error: 'Erro interno ao criar usuário' })
   }
-
-  // cria usuário forçando confirmação
-  const { data: user, error } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    password: senha,
-    email_confirm: true,   // força já confirmado
-  })
-
-  if (error) {
-    return res.status(400).json({ error: error.message })
-  }
-
-  // não devolvemos a service key nem nada sensível
-  return res.status(201).json({ user })
 }
