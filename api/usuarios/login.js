@@ -12,9 +12,9 @@ export default async function handler(req, res) {
     email,
     password: senha
   });
-
+\*
   if (error) {
     return res.status(401).json({ error: error.message });
-  }
+  }*\
   res.status(200).json({ user: session.user, session });
 }
