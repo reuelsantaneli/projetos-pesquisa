@@ -57,30 +57,23 @@
         alert('Digite seu email e senha');
         return;
       }
-
       try {
+        // Faz requisição para a rota POST /api/usuarios/login
         const res = await fetch('/api/usuarios/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, senha })
         });
-
-        // trata erro retornado pelo servidor
         if (!res.ok) {
           const err = await res.json();
-          alert(err.error || 'Login inválido');
+          alert(err.message || 'Login inválido');
           return;
         }
-
-        // extrai usuário e sessão
-        const { user, session } = await res.json();
-        // armazena no localStorage
-        localStorage.setItem('sb_user', JSON.stringify(user));
-        localStorage.setItem('sb_session', JSON.stringify(session));
-
-        // redireciona conforme nível (assume user.user_metadata.nivel definido)
-        const nivel = user.user_metadata?.nivel || 'usuario';
-        if (nivel === 'admin') {
+        const usuario = await res.json();
+        // Salva no localStorage para controlar sessão:
+        localStorage.setItem('usuario', JSON.stringify(usuario));
+        // Se for admin, vai para dashboard; se for usuario, vai para responder-formulario
+        if (usuario.nivel === 'admin') {
           window.location.href = 'dashboard.html';
         } else {
           window.location.href = 'responder-formulario.html';
