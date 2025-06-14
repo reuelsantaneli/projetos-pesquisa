@@ -65,5 +65,10 @@ app.listen(PORT, async () => {
     await db.write();
   }
 
-  console.log('Servidor rodando em http://localhost:' + PORT);
+    console.log('Servidor rodando em http://localhost:' + PORT);
+  } catch (err) {
+    console.error('Erro ao iniciar o banco de dados:', err);
+    db.data = { usuarios: [], formularios: [], respostas: [] };
+    await db.write();
+  }
 });
