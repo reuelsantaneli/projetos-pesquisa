@@ -1,4 +1,3 @@
-
 const express = require('express');
 const path = require('path');
 const { Low } = require('lowdb');
@@ -58,13 +57,12 @@ app.post('/login', async (req, res) => {
 });
 
 app.listen(PORT, async () => {
-  await db.read();
-
-  if (!db.data) {
-    db.data = { usuarios: [], formularios: [], respostas: [] };
-    await db.write();
-  }
-
+  try {
+    await db.read();
+    if (!db.data) {
+      db.data = { usuarios: [], formularios: [], respostas: [] };
+      await db.write();
+    }
     console.log('Servidor rodando em http://localhost:' + PORT);
   } catch (err) {
     console.error('Erro ao iniciar o banco de dados:', err);
