@@ -59,7 +59,11 @@ app.post('/login', async (req, res) => {
 
 app.listen(PORT, async () => {
   await db.read();
-  db.data ||= { usuarios: [], formularios: [], respostas: [] };
-  await db.write();
+
+  if (!db.data) {
+    db.data = { usuarios: [], formularios: [], respostas: [] };
+    await db.write();
+  }
+
   console.log('Servidor rodando em http://localhost:' + PORT);
 });
