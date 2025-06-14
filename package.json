@@ -1,20 +1,14 @@
+
 {
-  "name": "projetos-pesquisa",
+  "name": "sistema-formularios",
   "version": "1.0.0",
-  "description": "",
   "main": "server.js",
-  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "body-parser": "^2.2.0",
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "lowdb": "^7.0.1",
-    "nanoid": "^5.1.5"
+    "express": "^4.18.2",
+    "lowdb": "^6.0.1",
+    "nanoid": "^4.0.0"
   }
 }
